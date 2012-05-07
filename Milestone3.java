@@ -196,7 +196,7 @@ public class Milestone3 {
 						System.out.println("Error: No such chunk!");
 					} else 
 						if (val.intValue() == 1) {
-							//TODO delete this chunk in Milestone 3
+							uploader.deleteObject("chunks", nextSHA1);
 							chunkIndex.remove(nextSHA1);
 							Integer sval = chunkSizeIndex.remove(nextSHA1);
 							uniqueChunk--;
@@ -218,6 +218,7 @@ public class Milestone3 {
 //				}
 
 				System.out.println("Done!");
+				uploader.deleteObject("meta", filepath);
 				System.out.println("- Total chunks = " + totalChunk);
 				System.out.println("- No. of unique chunks = " + uniqueChunk);
 				System.out.println("- No. of duplicated chunks = " + duplicatedChunk);
@@ -245,6 +246,7 @@ public class Milestone3 {
 
 		uploader = new FilesClient("group10:group10", "lOnGjObpowS72", "http://10.10.10.1:8080/auth/v1.0");
 		uploader.setConnectionTimeOut(10000);
+		
 		try {
 			uploader.login();
 			uploader.createContainer("chunks");
