@@ -2,6 +2,7 @@ import java.io.*;
 import java.util.*;
 import java.security.*;
 import com.rackspacecloud.client.cloudfiles.*;
+import org.apache.http.HttpException;
 
 public class Downloader {
 
@@ -51,24 +52,51 @@ public class Downloader {
 	public static Integer one = new Integer(1);
 
 	public static void fileDown(String filepath) {
+		byte[] FileMeta = new byte[1];
 		try {
-			byte[] FileMeta = downloader.getObject("meta", filepath);
-			String MetaString = new String(FileMeta);
-			System.out.println(MetaString);
+			FileMeta = downloader.getObject("meta", filepath);
+		} catch (FilesNotFoundException e) {
+			System.out.println("File not found on cloud");
+			return;
+		} catch (IOException e) {
+			System.out.println("There was an IO error doing network communication");
+		} catch (HttpException e) {
+			System.out.println("There was an error with the http protocol");
+		}
+		String MetaString = new String(FileMeta);
+		Scanner sc = new Scanner(MetaString);
+		String nextSHA1;
+		Integer val;
+		FileOutputStream fos = null;
+		System.out.print("Where do you want to save? ");
+		Scanner scin = new Scanner(System.in);
+		String savepath = scin.nextLine();
+		try {
+			fos = new FileOutputStream(savepath);
+		} catch (FileNotFoundException e){
+			System.out.println("Cannot write to file " + savepath);
+			return;
+		}
 
-			Scanner sc = new Scanner(MetaString);
-			String nextSHA1;
-			Integer val;
-
-			while (sc.hasNext()) {
-				nextSHA1 = sc.next();
-				byte[] content = downloader.getObject("chunks", nextSHA1);
-				String StrContent = new String(content);
-				System.out.println(StrContent);
+		while (sc.hasNext()) {
+			nextSHA1 = sc.next();
+			byte[] content = new byte[1];
+			try {
+				content = downloader.getObject("chunks", nextSHA1);
+				fos.write(content);
+			} catch (FilesNotFoundException e) {
+				System.out.println("chunk " + nextSHA1 + " missing on cloud");
+			} catch (IOException e) {
+				System.out.println("There was an IO error doing network communication");
+			} catch (HttpException e) {
+				System.out.println("There was an error with the http protocol");
 			}
-			sc.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		}
+		sc.close();
+		try {
+			fos.close();
+		} catch (IOException e) {
+			System.out.println("Please be kind");
 		}
 	}
 
@@ -85,33 +113,18 @@ public class Downloader {
 
 		downloader = new FilesClient("group10:group10", "lOnGjObpowS72", "http://10.10.10.1:8080/auth/v1.0");
 		downloader.setConnectionTimeOut(10000);
-
+		boolean SuccessLogin = false;
 		try {
-			downloader.login();
-			/*BEGIN	CLEAN ALL !!!!!	*/
-			/*
-			try {
-				List<FilesObject> fos = downloader.listObjects("chunks");
-				for (FilesObject fo:fos){
-					downloader.deleteObject("chunks", fo.getName());
-				}   
-			} catch (Exception e) {
-				e.printStackTrace();
-			}   
-			downloader.deleteContainer("chunks");
-			try {
-				List<FilesObject> fos = downloader.listObjects("meta");
-				for (FilesObject fo:fos){
-					downloader.deleteObject("meta", fo.getName());
-				}   
-			} catch (Exception e) {
-				e.printStackTrace();
-			}   
-			downloader.deleteContainer("meta");
-			*/
-			/*END	CLEAN ALL !!!!! */
-		} catch (Exception e) {
-			e.printStackTrace();
+			SuccessLogin = downloader.login();
+		} catch (IOException e) {
+			System.out.println("There was an IO error doing network communication");
+		} catch (HttpException e) {
+			System.out.println("There was an error with the http protocol");
+		}
+
+		if (!SuccessLogin) {
+			System.out.println("username/password is not correct");
+			return;
 		}
 
 		while (!exit) {

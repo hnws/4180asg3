@@ -50,6 +50,7 @@ public class Milestone3 {
 
 	public static Integer one = new Integer(1);
 
+	@SuppressWarnings("unchecked")
 	public static void manageChunk(byte[] chunk, int len, StringBuffer metaBuf) {
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA1");
@@ -66,7 +67,9 @@ public class Milestone3 {
 			if (val == null) {
 				//Unique chunk!
 				Map<String, String> mp = new HashMap();
-				uploader.storeObject("chunks", chunk, "", sha1hex, mp);
+				System.out.print("Writing " + len +" bytes to cloud...");
+				uploader.storeObject("chunks", Arrays.copyOfRange(chunk, 0, len), "", sha1hex, mp);
+				System.out.println("Done");
 				chunkIndex.put(sha1hex, one);
 				chunkSizeIndex.put(sha1hex, new Integer(len));
 				uniqueChunk++;
@@ -84,6 +87,7 @@ public class Milestone3 {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public static void chunkFile(File file, int m, long d, long q, long maxSize, long mask) {
 
 		init(d, m, q);
@@ -151,7 +155,7 @@ public class Milestone3 {
 		try {
 			File inputFile = new File(filepath);
 			if (inputFile.exists() && inputFile.isFile() && inputFile.canRead()) {
-				System.out.print("Start processing......");
+				System.out.println("Start processing......");
 				if (inputFile.length() < sizeBound) {
 					chunkFile(inputFile, smallM, d, q, smallMax, smallMask);
 				} else {
@@ -180,54 +184,54 @@ public class Milestone3 {
 			//	System.out.print("Start processing......");
 
 			//	FileInputStream fis = new FileInputStream(inputFile);
-				
-				byte[] FileMeta = uploader.getObject("meta", filepath);
-				String MetaString = new String(FileMeta);
-				System.out.println(MetaString);
 
-				Scanner sc = new Scanner(MetaString);
-				String nextSHA1;
-				Integer val;
+			byte[] FileMeta = uploader.getObject("meta", filepath);
+			String MetaString = new String(FileMeta);
+			System.out.println(MetaString);
 
-				while (sc.hasNext()) {
-					nextSHA1 = sc.next();
-					val = chunkIndex.get(nextSHA1);
-					if (val == null) {
-						System.out.println("Error: No such chunk!");
-					} else 
-						if (val.intValue() == 1) {
-							uploader.deleteObject("chunks", nextSHA1);
-							chunkIndex.remove(nextSHA1);
-							Integer sval = chunkSizeIndex.remove(nextSHA1);
-							uniqueChunk--;
-							byteWith -= sval.intValue();
-							byteWithout -= sval.intValue();
-						} else {
-							chunkIndex.put(nextSHA1, new Integer(val.intValue()-1));
-							Integer sval = chunkSizeIndex.get(nextSHA1);
-							duplicatedChunk --;
-							byteWithout -= sval.intValue();
-						}
-					totalChunk --;
-				}
-				sc.close();
-//				fis.close();
+			Scanner sc = new Scanner(MetaString);
+			String nextSHA1;
+			Integer val;
 
-//				if (!inputFile.delete()) {
-//					System.out.println("Error: Cannot delete file: "+inputFile.getAbsolutePath());
-//				}
+			while (sc.hasNext()) {
+				nextSHA1 = sc.next();
+				val = chunkIndex.get(nextSHA1);
+				if (val == null) {
+					System.out.println("Error: No such chunk!");
+				} else 
+					if (val.intValue() == 1) {
+						uploader.deleteObject("chunks", nextSHA1);
+						chunkIndex.remove(nextSHA1);
+						Integer sval = chunkSizeIndex.remove(nextSHA1);
+						uniqueChunk--;
+						byteWith -= sval.intValue();
+						byteWithout -= sval.intValue();
+					} else {
+						chunkIndex.put(nextSHA1, new Integer(val.intValue()-1));
+						Integer sval = chunkSizeIndex.get(nextSHA1);
+						duplicatedChunk --;
+						byteWithout -= sval.intValue();
+					}
+				totalChunk --;
+			}
+			sc.close();
+			//				fis.close();
 
-				System.out.println("Done!");
-				uploader.deleteObject("meta", filepath);
-				System.out.println("- Total chunks = " + totalChunk);
-				System.out.println("- No. of unique chunks = " + uniqueChunk);
-				System.out.println("- No. of duplicated chunks = " + duplicatedChunk);
-				System.out.println("- No. of Bytes with deduplication = " + byteWith);
-				System.out.println("- No. of Bytes without deduplication = " + byteWithout);
+			//				if (!inputFile.delete()) {
+			//					System.out.println("Error: Cannot delete file: "+inputFile.getAbsolutePath());
+			//				}
 
-//			} else {
-//				System.out.println("Filepath is invalid or file has not been uploaded");
-//			}
+			System.out.println("Done!");
+			uploader.deleteObject("meta", filepath);
+			System.out.println("- Total chunks = " + totalChunk);
+			System.out.println("- No. of unique chunks = " + uniqueChunk);
+			System.out.println("- No. of duplicated chunks = " + duplicatedChunk);
+			System.out.println("- No. of Bytes with deduplication = " + byteWith);
+			System.out.println("- No. of Bytes without deduplication = " + byteWithout);
+
+			//			} else {
+			//				System.out.println("Filepath is invalid or file has not been uploaded");
+			//			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -246,17 +250,22 @@ public class Milestone3 {
 
 		uploader = new FilesClient("group10:group10", "lOnGjObpowS72", "http://10.10.10.1:8080/auth/v1.0");
 		uploader.setConnectionTimeOut(10000);
-		
+
 		try {
 			uploader.login();
-			uploader.createContainer("chunks");
+			if (!uploader.containerExists("chunks")) 
+				uploader.createContainer("chunks");
+			else
+				System.out.println("chunks is not clean, continue still");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		try {
-			uploader.login();
-			uploader.createContainer("meta");
+			if (!uploader.containerExists("meta")) 
+				uploader.createContainer("meta");
+			else
+				System.out.println("meta in not clean, continue still");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -271,23 +280,6 @@ public class Milestone3 {
 			if (cmd.equals("add ")) {
 				filepath = input.substring(4);
 				fileAdd(filepath);
-				try {
-					List<FilesObject> fos = uploader.listObjects("chunks");
-					for (FilesObject fo:fos){
-						System.out.println(fo.getName());
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-				try {
-					List<FilesObject> fos = uploader.listObjects("meta");
-					for (FilesObject fo:fos){
-						System.out.println(fo.getName());
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
 			} else 
 				if (cmd.equals("del ")) {
 					filepath = input.substring(4);
