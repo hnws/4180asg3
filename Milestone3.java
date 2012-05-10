@@ -67,9 +67,7 @@ public class Milestone3 {
 			if (val == null) {
 				//Unique chunk!
 				Map<String, String> mp = new HashMap();
-				System.out.print("Writing " + len +" bytes to cloud...");
 				uploader.storeObject("chunks", Arrays.copyOfRange(chunk, 0, len), "", sha1hex, mp);
-				System.out.println("Done");
 				chunkIndex.put(sha1hex, one);
 				chunkSizeIndex.put(sha1hex, new Integer(len));
 				uniqueChunk++;
